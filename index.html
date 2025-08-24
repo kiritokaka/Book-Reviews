@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>📚 Book Reviews</title>
+
+  <!-- Fonts: UI (Be Vietnam Pro) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap&subset=vietnamese" rel="stylesheet">
+
+  <style>
+    :root{--brand:#8b4513}
+    *{box-sizing:border-box}
+    body{
+      font-family:"Be Vietnam Pro",system-ui,-apple-system,Segoe UI,Roboto,Arial,"Helvetica Neue",sans-serif;
+      margin:0;background:#faf7f0;color:#222
+    }
+    header{
+      padding:14px 18px;background:#fff;border-bottom:1px solid #eee;
+      display:flex;gap:12px;align-items:center
+    }
+    header h1{margin:0;color:var(--brand);font-size:20px}
+    main{padding:18px;max-width:1200px;margin:0 auto}
+
+    .card{background:#fff;border:1px solid #e8e8e8;border-radius:12px;padding:14px}
+    input,textarea,select,button{padding:10px;border-radius:8px;border:1px solid #ccc;font-family:inherit}
+    textarea{resize:vertical;min-height:130px}
+    button{background:var(--brand);color:#fff;border:none;cursor:pointer}
+    .btn-secondary{background:#eee;color:#333;border:1px solid #ddd}
+    .row{display:flex;gap:10px;align-items:center}
+    .muted{color:#666}
+
+    /* Collapsible sections (đóng mặc định) */
+    details{margin-top:16px}
+    details>summary{
+      list-style:none;cursor:pointer;font-weight:600;color:#333;
+      background:#fff;border:1px solid #e8e8e8;padding:10px;border-radius:10px;
+    }
+    details[open]>summary{border-bottom-left-radius:0;border-bottom-right-radius:0}
+    details .card{border-top-left-radius:0;border-top-right-radius:0;border-top:none}
+
+    .avatar{width:72px;height:72px;border-radius:50%;object-fit:cover;border:1px solid #ddd}
+
+    /* File input (custom) */
+    .file{position:relative;display:flex;align-items:center;gap:10px;border:1px solid #ccc;border-radius:8px;padding:10px;background:#fff;width:100%}
+    .file input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer}
+    .file .file-label{white-space:nowrap;color:#555;font-weight:600}
+    .file .file-name{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#333}
+    .file .btn-browse{background:#eee;border:1px solid #ddd;color:#333;padding:6px 10px;border-radius:6px}
+
+    /* Books grid */
+    .books-grid{
+      display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr));
+      gap:14px; padding-top:6px;
+    }
+    .book-card{
+      background:#fff;border:1px solid #eee;border-radius:14px;overflow:hidden;
+      display:flex;flex-direction:column;transition:transform .15s ease,box-shadow .15s ease
+    }
+    .book-card:hover{transform:translateY(-2px);box-shadow:0 8px 20px rgba(0,0,0,.08)}
+    .cover-wrap{position:relative;padding:10px;background:#fafafa}
+    .cover{border-radius:10px;overflow:hidden;position:relative}
+    /* viền chạy màu cho ảnh bìa */
+    .cover::before{
+      content:"";position:absolute;inset:-2px;
+      background:conic-gradient(from var(--a,0deg),#ff9f43,#ff6b6b,#5f27cd,#48dbfb,#1dd1a1,#feca57,#ff9f43);
+      border-radius:12px;z-index:0;filter:blur(.5px);animation:spin 4s linear infinite;
+      -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);
+      -webkit-mask-composite:xor;mask-composite:exclude;padding:2px
+    }
+    @keyframes spin{to{--a:360deg}}
+    .cover>img{position:relative;z-index:1;width:100%;height:180px;object-fit:cover;display:block;border-radius:10px}
+    .book-body{padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+    .book-meta{font-size:12px;color:#666}
+    .book-actions{display:flex;gap:8px;margin-top:8px}
+    .book-actions button{flex:1}
+
+    .toolbar{display:flex;gap:10px;flex-wrap:wrap}
+    .btn-responsive{width:100%}
+    @media (min-width:900px){ .btn-responsive{width:auto} }
+
+    /* Nút header gọn */
+    header .header-btn{width:auto !important;padding:8px 12px;white-space:nowrap}
+
+    /* Modal */
+    .modal{position:fixed;inset:0;background:rgba(0,0,0,.5);display:none;align-items:center;justify-content:center;z-index:200}
+    .modal.show{display:flex}
+  </style>
+</head>
+<body>
+<header>
+  <h1>📚 Book Reviews</h1>
+  <div style="flex:1"></div>
+
+  <!-- Chuông thông báo -->
+  <div id="notifBox" style="position:relative; display:none">
+    <button id="btnBell" class="btn-secondary header-btn" onclick="toggleNotif()">
+      🔔 <span id="notifBadge" style="display:none; background:#c0392b;color:#fff;border-radius:10px;padding:2px 6px;margin-left:6px;font-size:12px">0</span>
+    </button>
+    <div id="notifDropdown" style="display:none; position:absolute; right:0; top:42px; width:320px; background:#fff;border:1px solid #eee;border-radius:10px;box-shadow:0 8px 20px rgba(0,0,0,.1); max-height:380px; overflow:auto">
+      <div style="padding:8px; border-bottom:1px solid #f0f0f0; display:flex; justify-content:space-between; align-items:center">
+        <strong>Thông báo</strong>
+        <button class="btn-secondary header-btn" onclick="readAllNotifs()">Đã đọc hết</button>
+      </div>
+      <div id="notifList" style="padding:8px"></div>
+    </div>
+  </div>
+
+  <button id="logoutBtn" class="btn-secondary header-btn" style="display:none" onclick="logout()">Đăng xuất</button>
+</header>
+
+<main>
+  <!-- Auth -->
+  <section id="authSection" class="card">
+    <h3>Đăng ký / Đăng nhập</h3>
+    <div class="row" style="align-items:flex-start;gap:16px;flex-wrap:wrap">
+      <div style="flex:1;min-width:280px">
+        <h4>Đăng ký</h4>
+        <input id="reg_name" placeholder="Tên"><br><br>
+        <input id="reg_email" placeholder="Email"><br><br>
+        <input id="reg_address" placeholder="Địa chỉ"><br><br>
+        <input id="reg_pass" type="password" placeholder="Mật khẩu (>=6 ký tự)"><br><br>
+        <button onclick="register()">Đăng ký</button>
+      </div>
+      <div style="flex:1;min-width:280px">
+        <h4>Đăng nhập</h4>
+        <input id="login_email" placeholder="Email"><br><br>
+        <input id="login_pass" type="password" placeholder="Mật khẩu"><br><br>
+        <button class="btn-secondary" onclick="login()">Đăng nhập</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Home -->
+  <section id="homeSection" style="display:none">
+
+    <!-- Hồ sơ + Tạo sách (đều đóng mặc định) -->
+    <details id="profileDetails">
+      <summary>🧑 Hồ sơ cá nhân</summary>
+      <div class="card">
+        <div class="row" style="align-items:flex-start">
+          <img id="meAvatar" class="avatar" src="" alt="">
+          <div style="flex:1">
+            <div id="meName" style="font-weight:600"></div>
+            <div id="meEmail" class="muted"></div>
+          </div>
+        </div>
+        <hr>
+        <form onsubmit="event.preventDefault(); updateProfile();">
+          <input id="pf_name" placeholder="Tên"><br><br>
+          <input id="pf_address" placeholder="Địa chỉ"><br><br>
+          <label class="file" style="margin-bottom:10px">
+            <span class="file-label">📷 Ảnh đại diện</span>
+            <span id="pf_avatar_name" class="file-name">Chưa chọn ảnh…</span>
+            <span class="btn-browse">Chọn ảnh</span>
+            <input type="file" id="pf_avatar" accept="image/*">
+          </label>
+          <button type="submit" class="btn-responsive">Cập nhật</button>
+        </form>
+        <button class="btn-responsive" style="margin-top:12px;background:#c0392b" onclick="deleteAccount()">Xoá tài khoản</button>
+      </div>
+    </details>
+
+    <details id="createDetails">
+      <summary>➕ Tạo sách tóm tắt</summary>
+      <div class="card">
+        <input id="bk_title" placeholder="Tên sách"><br><br>
+        <textarea id="bk_content" placeholder="Nội dung tóm tắt (không cho dán)"></textarea><br><br>
+        <input id="bk_genres" placeholder="Thể loại (ví dụ: kinh tế, tư duy)"><br><br>
+        <input id="bk_source" placeholder="Nguồn link (tuỳ chọn)"><br><br>
+        <label class="file" style="margin-bottom:10px">
+          <span class="file-label">📕 Ảnh bìa</span>
+          <span id="bk_cover_name" class="file-name">Chưa chọn ảnh…</span>
+          <span class="btn-browse">Chọn ảnh</span>
+          <input type="file" id="bk_cover" accept="image/*">
+        </label>
+        <button class="btn-responsive" onclick="createBook()">Tạo Sách</button>
+        <div class="muted" style="margin-top:6px"></div>
+      </div>
+    </details>
+
+    <!-- Search -->
+    <div class="card" style="margin-top:14px">
+      <h3>Tìm kiếm</h3>
+      <div class="toolbar" style="margin-top:8px">
+        <input id="q" placeholder="Từ khoá..." oninput="loadBooks()">
+        <select id="genre" onchange="loadBooks()" style="min-width:220px">
+          <option value="">— Lọc theo thể loại —</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- List -->
+    <div class="card" style="margin-top:14px">
+      <h3>Danh sách sách</h3>
+      <div id="books" class="books-grid"></div>
+    </div>
+  </section>
+
+  <!-- Modal Edit -->
+  <div id="editModal" class="modal">
+    <div style="background:#fff;padding:16px;border-radius:12px;min-width:360px;max-width:640px;width:95%">
+      <h3>Sửa sách</h3>
+      <input id="e_title" placeholder="Tên sách"><br><br>
+      <textarea id="e_content" placeholder="Nội dung"></textarea><br><br>
+      <input id="e_genres" placeholder="Thể loại (a, b)"><br><br>
+      <input id="e_source" placeholder="Nguồn link"><br><br>
+      <label class="file" style="margin-bottom:10px">
+        <span class="file-label">📕 Ảnh bìa mới</span>
+        <span id="e_cover_name" class="file-name">Chưa chọn ảnh…</span>
+        <span class="btn-browse">Chọn ảnh</span>
+        <input type="file" id="e_cover" accept="image/*">
+      </label>
+      <div class="row" style="justify-content:flex-end">
+        <button class="btn-secondary" onclick="closeEdit()">Huỷ</button>
+        <button onclick="saveEdit()">Lưu</button>
+      </div>
+    </div>
+  </div>
+</main>
+
+<script>
+  // ===== Helpers & State =====
+  let token = localStorage.getItem('token');
+  let me = JSON.parse(localStorage.getItem('me') || 'null');
+  let editingId = null;
+  let notifTimer = null;
+
+  const $ = (s)=>document.querySelector(s);
+  const esc = (s)=>String(s||"").replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+  const val = (s)=>$(s).value.trim();
+
+  const hookFileName = (inputSel, nameSel) => {
+    const inp = $(inputSel), out = $(nameSel);
+    inp?.addEventListener('change', ()=> out.textContent = inp.files?.[0]?.name || 'Chưa chọn ảnh…');
+  };
+  hookFileName('#pf_avatar','#pf_avatar_name');
+  hookFileName('#bk_cover','#bk_cover_name');
+  hookFileName('#e_cover','#e_cover_name');
+
+  // Cấm paste nội dung khi tạo sách
+  document.addEventListener('DOMContentLoaded', ()=>{
+    const t = document.getElementById('bk_content');
+    t?.addEventListener('paste', e => { e.preventDefault(); alert('Không cho dán nội dung, hãy tự gõ nhé!'); });
+  });
+
+  init();
+
+  async function init(){
+    if(!token){ showAuth(); return; }
+    try{
+      const r = await fetch('/api/auth/me', { headers:{Authorization:'Bearer '+token} });
+      const j = await r.json(); if(!j.user) throw 0;
+      me = j.user; localStorage.setItem('me', JSON.stringify(me));
+      showHome(); await loadGenres(); await loadBooks(); startNotifPolling();
+    }catch{ logout(true); }
+  }
+
+  function showAuth(){
+    $('#authSection').style.display = '';
+    $('#homeSection').style.display = 'none';
+    $('#logoutBtn').style.display = 'none';
+    document.getElementById('notifBox').style.display = 'none';
+  }
+  function showHome(){
+    $('#authSection').style.display = 'none';
+    $('#homeSection').style.display = '';
+    $('#logoutBtn').style.display = '';
+    document.getElementById('notifBox').style.display = '';
+    $('#meName').textContent = me.name || '';
+    $('#meEmail').textContent = me.email || '';
+    $('#meAvatar').src = me.avatar_url || 'https://via.placeholder.com/72x72?text=🙂';
+    $('#pf_name').value = me.name || '';
+    $('#pf_address').value = me.address || '';
+    $('#pf_avatar_name').textContent = 'Chưa chọn ảnh…';
+    $('#bk_cover_name').textContent = 'Chưa chọn ảnh…';
+    $('#e_cover_name').textContent  = 'Chưa chọn ảnh…';
+  }
+  function saveAuth(data){
+    token=data.token; me=data.user;
+    localStorage.setItem('token', token);
+    localStorage.setItem('me', JSON.stringify(me));
+    showHome(); loadGenres(); loadBooks(); startNotifPolling();
+  }
+  function logout(silent=false){
+    token=null; me=null;
+    localStorage.removeItem('token'); localStorage.removeItem('me');
+    clearInterval(notifTimer);
+    if(!silent) alert('Đã đăng xuất');
+    showAuth();
+  }
+
+  // ===== Auth (password) =====
+  async function register(){
+    const body = {
+      name: val('#reg_name'),
+      email: val('#reg_email'),
+      address: val('#reg_address'),
+      password: val('#reg_pass')
+    };
+    const r = await fetch('/api/auth/register',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const j = await r.json(); if(j.token) saveAuth(j); else alert(j.error||'Lỗi đăng ký');
+  }
+  async function login(){
+    const body = { email: val('#login_email'), password: val('#login_pass') };
+    const r = await fetch('/api/auth/login',{ method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(body) });
+    const j = await r.json(); if(j.token) saveAuth(j); else alert(j.error||'Lỗi đăng nhập');
+  }
+
+  // ===== Profile =====
+  async function updateProfile(){
+    const fd = new FormData();
+    fd.append('name', $('#pf_name').value.trim());
+    fd.append('address', $('#pf_address').value.trim());
+    const f = $('#pf_avatar').files[0]; if(f) fd.append('avatar', f);
+    const r = await fetch('/api/users/me', { method:'PATCH', headers:{Authorization:'Bearer '+token}, body: fd });
+    const j = await r.json();
+    if(j.user){ me=j.user; localStorage.setItem('me', JSON.stringify(me)); showHome(); alert('Cập nhật OK'); }
+    else alert(j.error||'Lỗi cập nhật');
+  }
+  async function deleteAccount(){
+    if(!confirm('Xoá tài khoản?')) return;
+    const r = await fetch('/api/users/me', { method:'DELETE', headers:{Authorization:'Bearer '+token} });
+    if(r.ok){ logout(); } else { const j=await r.json(); alert(j.error||'Lỗi xoá'); }
+  }
+
+  // ===== Tạo sách =====
+  async function createBook(){
+    if(!token) return alert('Cần đăng nhập');
+    const fd = new FormData();
+    fd.append('title',   $('#bk_title').value.trim());
+    fd.append('content', $('#bk_content').value.trim());
+    fd.append('genres',  $('#bk_genres').value.trim());
+    fd.append('sourceUrl', $('#bk_source').value.trim());
+    const f = $('#bk_cover').files[0]; if(f) fd.append('cover', f);
+
+    const r = await fetch('/api/books', { method:'POST', headers:{Authorization:'Bearer '+token}, body: fd });
+    const j = await r.json();
+    if(j.book) location.href = '/book.html?id=' + j.book.id;
+    else alert(j.error || 'Lỗi tạo sách');
+  }
+
+  // ===== Genres + Search + List =====
+  async function loadGenres(){
+    const r = await fetch('/api/genres'); const j = await r.json();
+    const sel = $('#genre'); sel.innerHTML = `<option value="">— Lọc theo thể loại —</option>`;
+    j.genres.forEach(g=>{ const o=document.createElement('option'); o.value=g; o.textContent=g; sel.appendChild(o); });
+  }
+  async function loadBooks(){
+    const q = encodeURIComponent(val('#q'));
+    const g = encodeURIComponent($('#genre').value);
+    const r = await fetch(`/api/books?search=${q}&genre=${g}`); const j = await r.json();
+    const grid = $('#books'); grid.innerHTML='';
+    j.books.forEach(b=>{
+      const card = document.createElement('div'); card.className='book-card';
+      card.innerHTML = `
+        <div class="cover-wrap">
+          <div class="cover">
+            <img src="${b.cover_url || 'https://via.placeholder.com/300x180?text=No+Cover'}"
+                 onerror="this.onerror=null;this.src='https://via.placeholder.com/300x180?text=No+Cover';" alt="">
+          </div>
+        </div>
+        <div class="book-body">
+          <div style="font-weight:700">${esc(b.title)}</div>
+          <div class="book-meta">Tác giả: ${esc(b.author_name)} · Thể loại: ${b.genres.join(', ')||'—'}</div>
+          <div class="book-meta">❤️ ${b.like_count} · 💬 ${b.comment_count}</div>
+          <div class="book-actions">
+            ${me && me.id===b.author_id ? `
+              <button class="btn-secondary" onclick='openEdit("${b.id}")'>Sửa</button>
+              <button style="background:#c0392b" onclick='delBook("${b.id}")'>Xoá</button>` : ``
+            }
+            <button onclick='location.href="/book.html?id=${b.id}"'>Đọc</button>
+          </div>
+        </div>
+      `;
+      grid.appendChild(card);
+    });
+  }
+
+  // ===== Edit / Delete =====
+  async function openEdit(id){
+    const r = await fetch('/api/books/'+id); const { book } = await r.json();
+    editingId = id;
+    $('#e_title').value   = book.title || '';
+    $('#e_content').value = book.content || '';
+    $('#e_genres').value  = (book.genres||[]).join(', ');
+    $('#e_source').value  = book.source_url || '';
+    $('#e_cover').value   = ''; $('#e_cover_name').textContent='Chưa chọn ảnh…';
+    $('#editModal').classList.add('show');
+  }
+  function closeEdit(){ editingId=null; $('#editModal').classList.remove('show'); }
+  async function saveEdit(){
+    if(!editingId) return;
+    const fd = new FormData();
+    fd.append('title', $('#e_title').value.trim());
+    fd.append('content', $('#e_content').value.trim());
+    fd.append('genres', $('#e_genres').value.trim());
+    fd.append('sourceUrl', $('#e_source').value.trim());
+    const f = $('#e_cover').files[0]; if(f) fd.append('cover', f);
+    const r = await fetch('/api/books/'+editingId, { method:'PATCH', headers:{Authorization:'Bearer '+token}, body: fd });
+    const j = await r.json();
+    if(r.ok){ closeEdit(); loadBooks(); } else alert(j.error||'Lỗi sửa');
+  }
+  async function delBook(id){
+    if(!confirm('Xoá sách này?')) return;
+    const r = await fetch('/api/books/'+id, { method:'DELETE', headers:{Authorization:'Bearer '+token} });
+    if(r.ok) loadBooks(); else { const j=await r.json(); alert(j.error||'Lỗi xoá'); }
+  }
+
+  // ===== Notifications (polling) =====
+  function toggleNotif(){
+    const dd = document.getElementById('notifDropdown');
+    dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+  }
+
+  async function fetchNotifs(){
+    if(!token) return;
+    const r = await fetch('/api/notifications?unread=1', { headers:{Authorization:'Bearer '+token} });
+    const j = await r.json();
+    const count = j.notifications.length;
+    const badge = document.getElementById('notifBadge');
+    badge.textContent = count;
+    badge.style.display = count ? '' : 'none';
+
+    const all = await (await fetch('/api/notifications', { headers:{Authorization:'Bearer '+token} })).json();
+    const box = document.getElementById('notifList'); box.innerHTML='';
+    all.notifications.forEach(n=>{
+      const li = document.createElement('div');
+      li.style.cssText = 'display:flex;gap:8px;align-items:flex-start;padding:8px;border-radius:8px;background:'+(n.is_read?'#fff':'#fafafa')+';margin-bottom:6px;cursor:pointer';
+      li.innerHTML = `
+        <img src="${n.actor_avatar || 'https://via.placeholder.com/28?text=🙂'}" style="width:28px;height:28px;border-radius:50%;border:1px solid #ddd;object-fit:cover">
+        <div>
+          <div style="font-size:14px">
+            <strong>${n.actor_name}</strong> ${n.type==='like' ? 'đã thích' : 'đã trả lời'}${n.book_title ? ' <em>'+esc(n.book_title)+'</em>' : ''}
+          </div>
+          <div class="muted" style="font-size:12px">${new Date(n.created_at).toLocaleString()}</div>
+        </div>`;
+      li.onclick = async ()=>{
+        await fetch(`/api/notifications/${n.id}/read`, { method:'PATCH', headers:{Authorization:'Bearer '+token} });
+        if(n.book_id) location.href = `/book.html?id=${n.book_id}`;
+      };
+      box.appendChild(li);
+    });
+  }
+
+  async function readAllNotifs(){
+    await fetch('/api/notifications/read-all', { method:'PATCH', headers:{Authorization:'Bearer '+token} });
+    fetchNotifs();
+  }
+
+  function startNotifPolling(){
+    document.getElementById('notifBox').style.display = '';
+    fetchNotifs();
+    clearInterval(notifTimer);
+    notifTimer = setInterval(fetchNotifs, 15000);
+  }
+</script>
+</body>
+</html>

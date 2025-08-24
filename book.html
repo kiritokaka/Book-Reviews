@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Đọc sách</title>
+
+  <!-- Fonts: UI + Book content -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap&subset=vietnamese" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif:ital,wght@0,400;0,600;1,400&display=swap&subset=vietnamese" rel="stylesheet">
+
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family:"Be Vietnam Pro",system-ui,-apple-system,Segoe UI,Roboto,Arial,"Helvetica Neue",sans-serif;
+      background: linear-gradient(135deg, #8b4513, #a0522d);
+      min-height: 100vh;
+      color:#2c2c2c;
+    }
+
+    /* Topbar */
+    .topbar{
+      display:flex;gap:10px;align-items:center;justify-content:space-between;
+      padding:12px 16px;background:rgba(255,255,255,0.2);
+      backdrop-filter: blur(6px);
+    }
+    .btn{border:none;border-radius:10px;padding:10px 14px;cursor:pointer}
+    .btn-secondary{background:#fff;color:#333}
+    .titlebar{color:#fff}
+    .titlebar h1{font-size:20px;margin:0;line-height:1.2}
+    .titlebar .meta{opacity:.9;font-size:13px}
+
+    .reader-container { background: transparent; max-width: 1200px; width: 100%; position: relative; margin: 10px auto 0 auto; padding: 0 16px 20px 16px; }
+    .controls { background: rgba(139, 69, 19, 0.9); backdrop-filter: blur(10px); padding: 15px 20px; border-radius: 15px 15px 0 0; display: flex; justify-content: center; gap: 40px; margin-bottom: 10px; }
+    .control-group { display: flex; align-items: center; gap: 12px; }
+    .control-group label { font-size: 14px; font-weight: 500; color: #fff; text-shadow: 1px 1px 2px rgba(0,0,0,.5); }
+    .slider{ width:120px;height:6px;border-radius:3px;background:rgba(255,255,255,.3);outline:none;-webkit-appearance:none;}
+    .slider::-webkit-slider-thumb{ -webkit-appearance:none;appearance:none;width:20px;height:20px;border-radius:50%;background:#fff;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3);}
+    .slider::-moz-range-thumb{ width:20px;height:20px;border-radius:50%;background:#fff;cursor:pointer;border:none;box-shadow:0 2px 6px rgba(0,0,0,.3); }
+
+    .book-container { height: 700px; position: relative; perspective: 2000px; background: var(--bg-color, #faf7f0); border-radius: 0 0 15px 15px; box-shadow: 0 20px 40px rgba(0,0,0,.4); overflow: hidden; }
+    .book { width:100%; height:100%; position:relative; transform-style:preserve-3d; display:flex; }
+    .book-spread { width:100%; height:100%; display:flex; position:absolute; top:0; left:0; }
+    .page-left, .page-right { width: calc(50% - 20px); height:100%; background: var(--bg-color, #faf7f0); padding: 50px 40px 80px 40px; position:relative; }
+    .page-left { margin-right:10px;border-radius:0 8px 8px 0; background: radial-gradient(ellipse 100px 300px at 100% 50%, rgba(139,69,19,.03) 0%, transparent 50%), linear-gradient(to right, var(--bg-color,#faf7f0) 0%, rgba(139,69,19,.01) 95%, rgba(139,69,19,.05) 100%), var(--bg-color,#faf7f0); box-shadow: inset -8px 0 20px -10px rgba(139,69,19,.1), inset -2px 0 5px -2px rgba(139,69,19,.05); transform-origin:right center; transform: perspective(1000px) rotateY(-1deg); }
+    .page-right{ margin-left:10px;border-radius:8px 0 0 8px; background: radial-gradient(ellipse 100px 300px at 0% 50%, rgba(139,69,19,.03) 0%, transparent 50%), linear-gradient(to left, var(--bg-color,#faf7f0) 0%, rgba(139,69,19,.01) 95%, rgba(139,69,19,.05) 100%), var(--bg-color,#faf7f0); box-shadow: inset 8px 0 20px -10px rgba(139,69,19,.1), inset 2px 0 5px -2px rgba(139,69,19,.05); transform-origin:left center; transform: perspective(1000px) rotateY(1deg); }
+
+    .page-content { width:100%; height:100%; line-height:1.7; color: var(--text-color,#2c2c2c); font-size: var(--font-size,16px); text-align:justify; text-justify:inter-word; word-wrap:break-word; font-family:"Noto Serif","Times New Roman",Times,Georgia,serif; }
+    .page-content h1{ font-size: calc(var(--font-size, 16px) * 2); margin-bottom: 30px; text-align:center; color:#8b4513; font-weight:600; }
+    .page-content h2{ font-size: calc(var(--font-size, 16px) * 1.5); margin: 30px 0 20px 0; color:#8b4513; font-weight:600; }
+    .page-content p{ margin-bottom:18px; text-indent:25px; }
+
+    .page-number { position:absolute; bottom:30px; font-size: calc(var(--font-size, 16px) * .8); color: var(--text-color,#666); }
+    .page-left .page-number { left:40px; } .page-right .page-number { right:40px; }
+
+    .binding-gutter { position:absolute; left:50%; top:0; width:40px; height:100%; transform:translateX(-50%); z-index:20; background: linear-gradient(to right, transparent 0%, rgba(139,69,19,.05) 20%, rgba(139,69,19,.1) 40%, rgba(139,69,19,.15) 50%, rgba(139,69,19,.1) 60%, rgba(139,69,19,.05) 80%, transparent 100%); box-shadow: inset 0 0 30px -5px rgba(139,69,19,.2), 0 0 20px -5px rgba(139,69,19,.1); }
+    .binding-gutter::before{ content:""; position:absolute; top:0; left:50%; width:2px; height:100%; background: linear-gradient(to bottom, rgba(139,69,19,.2) 0%, rgba(139,69,19,.4) 20%, rgba(139,69,19,.6) 50%, rgba(139,69,19,.4) 80%, rgba(139,69,19,.2) 100%); transform:translateX(-50%); }
+
+    .flipping-page { position:absolute; top:0; width: calc(50% - 10px); height:100%; background: var(--bg-color,#faf7f0); transform-style:preserve-3d; transition: transform .8s ease-out; z-index:10; border-radius:8px; }
+    .flipping-page.next-flip { right:0; transform-origin:left center; border-radius:8px 0 0 8px; }
+    .flipping-page.prev-flip { left:10px; transform-origin:right center; border-radius:0 8px 8px 0; }
+    .flipping-page .page-front, .flipping-page .page-back { position:absolute; width:100%; height:100%; backface-visibility:hidden; padding:50px 40px 80px 40px; }
+    .flipping-page .page-front { background: radial-gradient(ellipse 100px 300px at 0% 50%, rgba(139,69,19,.03) 0%, transparent 50%), linear-gradient(to left, var(--bg-color,#faf7f0) 0%, rgba(139,69,19,.01) 95%, rgba(139,69,19,.05) 100%), var(--bg-color,#faf7f0); }
+    .flipping-page .page-back  { background: radial-gradient(ellipse 100px 300px at 100% 50%, rgba(139,69,19,.03) 0%, transparent 50%), linear-gradient(to right, var(--bg-color,#faf7f0) 0%, rgba(139,69,19,.01) 95%, rgba(139,69,19,.05) 100%), var(--bg-color,#faf7f0); transform: rotateY(180deg); }
+    .flipping-page.flipping.next-flip { transform: rotateY(-180deg); }
+    .flipping-page.flipping.prev-flip { transform: rotateY(180deg); }
+
+    .click-areas { position:absolute; top:0; left:0; width:100%; height:100%; z-index:5; display:flex; }
+    .click-area { height:100%; width:50%; cursor:pointer; transition: background-color .2s ease; }
+    .click-area:hover { background-color: rgba(139,69,19,.03); }
+
+    .page-indicator { position:absolute; top:20px; left:50%; transform:translateX(-50%); background: rgba(139, 69, 19, 0.8); color:#fff; padding:8px 20px; border-radius:20px; font-size:12px; font-weight:500; z-index:25; text-shadow:1px 1px 2px rgba(0,0,0,.5); }
+
+    .measurement-container { position:absolute; top:-9999px; left:-9999px; width: calc(50% - 20px); padding:50px 40px 80px 40px; line-height:1.7; text-align:justify; text-justify:inter-word; word-wrap:break-word; font-family:"Noto Serif","Times New Roman",Times,Georgia,serif; visibility:hidden; }
+
+    @media (max-width:768px){
+      .controls{flex-direction:column;gap:20px}
+      .book-container{height:600px}
+      .page-left,.page-right{padding:30px 25px 60px 25px;width:calc(50% - 15px)}
+      .page-left{margin-right:7px}.page-right{margin-left:8px}
+      .binding-gutter{width:30px}
+      .flipping-page{width:calc(50% - 8px)}
+      .flipping-page .page-front,.flipping-page .page-back{padding:30px 25px 60px 25px}
+      .measurement-container{width:calc(50% - 15px);padding:30px 25px 60px 25px}
+    }
+
+    /* Comments */
+    .comment-wrap{max-width:1200px;margin:20px auto;padding:0 16px 40px 16px}
+    .comments-card{background:#fff;border:1px solid #eee;border-radius:12px;padding:14px}
+    .cmt-item{display:flex;gap:10px;align-items:flex-start;margin:8px 0}
+    .cmt-item img{width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #ddd}
+    .cmt-body{background:#fff;border:1px solid #eee;padding:8px 10px;border-radius:10px;max-width:900px}
+    .cmt-name{font-weight:600;margin-bottom:4px}
+    .row{display:flex;gap:10px;align-items:center}
+    input, textarea, button{font-family:inherit}
+    textarea{width:100%;min-height:80px;padding:10px;border-radius:8px;border:1px solid #ccc}
+    .btn{background:#8b4513;color:#fff}
+    .btn-secondary{background:#fff;color:#333;border:1px solid #ddd}
+  </style>
+</head>
+<body>
+  <div class="topbar">
+    <button class="btn btn-secondary" onclick="location.href='/'">← Trang chủ</button>
+    <div class="titlebar">
+      <h1 id="bookTitle">Đang tải…</h1>
+      <div class="meta" id="bookMeta"></div>
+    </div>
+    <div>
+      <button id="btnLike" class="btn btn-secondary" onclick="toggleLike()">♡ Thích</button>
+    </div>
+  </div>
+
+  <div class="reader-container">
+    <div class="controls">
+      <div class="control-group">
+        <label for="brightness">Brightness</label>
+        <input type="range" id="brightness" class="slider" min="0.4" max="1" step="0.1" value="1">
+      </div>
+      <div class="control-group">
+        <label for="font-size">Font Size</label>
+        <input type="range" id="font-size" class="slider" min="14" max="22" step="1" value="16">
+      </div>
+    </div>
+
+    <div class="book-container" id="bookContainer">
+      <div class="page-indicator" id="pageIndicator">Page 1-2</div>
+      <div class="binding-gutter"></div>
+
+      <div class="book" id="book">
+        <div class="book-spread" id="currentSpread">
+          <div class="page-left">
+            <div class="page-content" id="leftPageContent"></div>
+            <div class="page-number" id="leftPageNumber">1</div>
+          </div>
+          <div class="page-right">
+            <div class="page-content" id="rightPageContent"></div>
+            <div class="page-number" id="rightPageNumber">2</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="click-areas">
+        <div class="click-area" id="prevArea"></div>
+        <div class="click-area" id="nextArea"></div>
+      </div>
+    </div>
+
+    <div class="measurement-container" id="measurementContainer"></div>
+  </div>
+
+  <div class="comment-wrap">
+    <div class="comments-card">
+      <h3 style="margin-bottom:10px">Bình luận</h3>
+      <div id="comments"></div>
+      <div id="commentBox" style="margin-top:10px">
+        <textarea id="commentInput" placeholder="Viết bình luận…"></textarea>
+        <div class="row" style="justify-content:flex-end;margin-top:8px">
+          <button class="btn" onclick="postComment()">Gửi bình luận</button>
+        </div>
+      </div>
+      <div id="loginHint" style="display:none;color:#555">Hãy đăng nhập ở trang chủ để bình luận.</div>
+    </div>
+  </div>
+
+<script>
+  const $ = (s)=>document.querySelector(s);
+  const esc = (s)=>String(s||"").replace(/[&<>"']/g, m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+  const token = localStorage.getItem('token');
+  let bookId = new URLSearchParams(location.search).get('id');
+  let bookData = null;
+
+  /* ---------------- DigitalBookReader ---------------- */
+  class DigitalBookReader {
+    constructor(elements) {
+      this.currentSpread = 0; this.totalPages = 0; this.pages = []; this.isAnimating = false;
+      this.book = $("#book"); this.leftPageContent = $("#leftPageContent"); this.rightPageContent = $("#rightPageContent");
+      this.leftPageNumber = $("#leftPageNumber"); this.rightPageNumber = $("#rightPageNumber"); this.pageIndicator = $("#pageIndicator");
+      this.brightnessSlider = $("#brightness"); this.fontSizeSlider = $("#font-size"); this.bookContainer = $("#bookContainer");
+      this.prevArea = $("#prevArea"); this.nextArea = $("#nextArea"); this.measurementContainer = $("#measurementContainer");
+      this.bookElements = elements;
+      this.prevArea.addEventListener("click", () => this.prevSpread());
+      this.nextArea.addEventListener("click", () => this.nextSpread());
+      this.brightnessSlider.addEventListener("input", (e) => this.adjustBrightness(e.target.value));
+      this.fontSizeSlider.addEventListener("input", (e) => { this.adjustFontSize(e.target.value); setTimeout(()=>this.repaginateContent(),50); });
+      document.addEventListener("keydown", (e) => { if (e.key==="ArrowLeft") this.prevSpread(); if (e.key==="ArrowRight") this.nextSpread(); });
+      setTimeout(()=>this.repaginateContent(),100);
+    }
+    repaginateContent() {
+      this.pages = []; const maxHeight = this.getMaxPageHeight() - 100;
+      this.measurementContainer.style.fontSize = getComputedStyle(this.bookContainer).getPropertyValue("--font-size") || "16px";
+      this.measurementContainer.style.color = getComputedStyle(this.bookContainer).getPropertyValue("--text-color") || "#2c2c2c";
+      let currentPageElements = [], currentPageHeight = 0;
+      for (const element of this.bookElements) {
+        const elementHeight = this.measureElementHeight(element);
+        if (elementHeight > maxHeight) {
+          if (currentPageElements.length > 0) { this.pages.push([...currentPageElements]); currentPageElements = []; currentPageHeight = 0; }
+          if (element.type === "p") this.splitParagraph(element, maxHeight).forEach(sp=>this.pages.push([sp]));
+          else this.pages.push([element]);
+        } else if (currentPageHeight + elementHeight > maxHeight && currentPageElements.length > 0) {
+          this.pages.push([...currentPageElements]); currentPageElements = [element]; currentPageHeight = elementHeight;
+        } else { currentPageElements.push(element); currentPageHeight += elementHeight; }
+      }
+      if (currentPageElements.length > 0) this.pages.push(currentPageElements);
+      this.totalPages = this.pages.length; if (this.currentSpread * 2 >= this.totalPages) this.currentSpread = Math.max(0, Math.floor((this.totalPages - 1) / 2));
+      this.updateCurrentSpread(); this.updateUI();
+    }
+    measureElementHeight(element) {
+      const style = element.style ? ` style="${element.style}"` : "";
+      this.measurementContainer.innerHTML = `<${element.type}${style}>${element.content}</${element.type}>`;
+      return this.measurementContainer.firstElementChild.offsetHeight;
+    }
+    splitParagraph(paragraph, maxHeight) {
+      const words = paragraph.content.split(" "); const parts = []; let currentWords = [];
+      for (const word of words) {
+        const testWords = [...currentWords, word];
+        const testElement = { ...paragraph, content: testWords.join(" ") };
+        const testHeight = this.measureElementHeight(testElement);
+        if (testHeight > maxHeight && currentWords.length > 0) { parts.push({ ...paragraph, content: currentWords.join(" ") }); currentWords = [word]; }
+        else currentWords.push(word);
+      }
+      if (currentWords.length > 0) parts.push({ ...paragraph, content: currentWords.join(" ") });
+      return parts;
+    }
+    getMaxPageHeight() { const h = this.bookContainer.offsetHeight; const pad = window.innerWidth <= 768 ? 90 : 130; return h - pad; }
+    renderPageContent(pageIndex) { if (pageIndex >= this.pages.length) return ""; return this.pages[pageIndex].map(el=>`<${el.type}${el.style?` style="${el.style}"`:""}>${el.content}</${el.type}>`).join(""); }
+    updateCurrentSpread() {
+      const left = this.currentSpread * 2, right = left + 1;
+      this.leftPageContent.innerHTML = this.renderPageContent(left);
+      this.rightPageContent.innerHTML = this.renderPageContent(right);
+      this.leftPageNumber.textContent = left + 1;
+      this.rightPageNumber.textContent = right < this.totalPages ? right + 1 : "";
+    }
+    nextSpread(){ if(this.isAnimating || this.currentSpread*2+1>=this.totalPages) return; this.isAnimating=true; this.flip("next"); }
+    prevSpread(){ if(this.isAnimating || this.currentSpread<=0) return; this.isAnimating=true; this.flip("prev"); }
+    flip(direction){
+      const flippingPage = document.createElement("div"); flippingPage.className = `flipping-page ${direction}-flip`;
+      const pageFront = document.createElement("div"); pageFront.className = "page-front";
+      const pageBack  = document.createElement("div"); pageBack.className  = "page-back";
+      if (direction === "next") {
+        const cr = this.currentSpread * 2 + 1, nl = (this.currentSpread + 1) * 2;
+        pageFront.innerHTML = `<div class="page-content">${this.renderPageContent(cr)}</div><div class="page-number">${cr < this.totalPages ? cr + 1 : ""}</div>`;
+        pageBack.innerHTML  = `<div class="page-content">${this.renderPageContent(nl)}</div><div class="page-number">${nl < this.totalPages ? nl + 1 : ""}</div>`;
+      } else {
+        const cl = this.currentSpread * 2, pr = (this.currentSpread - 1) * 2 + 1;
+        pageFront.innerHTML = `<div class="page-content">${this.renderPageContent(pr)}</div><div class="page-number">${pr < this.totalPages ? pr + 1 : ""}</div>`;
+        pageBack.innerHTML  = `<div class="page-content">${this.renderPageContent(cl)}</div><div class="page-number">${cl + 1}</div>`;
+      }
+      flippingPage.appendChild(pageFront); flippingPage.appendChild(pageBack); this.book.appendChild(flippingPage);
+      setTimeout(()=>flippingPage.classList.add("flipping"),50);
+      setTimeout(()=>{ this.currentSpread += (direction==="next"?1:-1); this.updateCurrentSpread(); this.updateUI(); },300);
+      setTimeout(()=>{ this.book.removeChild(flippingPage); this.isAnimating=false; },850);
+    }
+    updateUI(){ const l = this.currentSpread*2+1, r = this.currentSpread*2+2; this.pageIndicator.textContent = `Page ${l}${r<=this.totalPages?`-${r}`:""} of ${this.totalPages}`; }
+    adjustBrightness(v){ const b=parseFloat(v), bg=`rgb(${Math.floor(250*b)},${Math.floor(247*b)},${Math.floor(240*b)})`, tc=b>0.7?"#2c2c2c":"#555"; $("#bookContainer").style.setProperty("--bg-color",bg); $("#bookContainer").style.setProperty("--text-color",tc); }
+    adjustFontSize(v){ $("#bookContainer").style.setProperty("--font-size",`${v}px`); }
+  }
+
+  function buildElementsFromContent(content, title) {
+    const elements = []; if (title) elements.push({ type:"h1", content: esc(title) });
+    if (!content) return elements;
+    const parts = content.replace(/\r\n/g,"\n").split(/\n{2,}/);
+    for (const p of parts) {
+      const t = p.trim(); if (!t) continue;
+      if (/^#{2}\s+/.test(t)) elements.push({ type:"h2", content: esc(t.replace(/^#{2}\s+/, "")) });
+      else elements.push({ type:"p", content: esc(t) });
+    }
+    return elements;
+  }
+
+  /* ---------------- Comments + Reply ---------------- */
+  function renderCommentNode(node, container){
+    const wrap = document.createElement('div');
+    wrap.className = 'cmt-item';
+    wrap.innerHTML = `
+      <img src="${node.author_avatar || 'https://via.placeholder.com/36?text=🙂'}">
+      <div style="flex:1">
+        <div class="cmt-body">
+          <div class="cmt-name">${esc(node.author_name)}</div>
+          <div>${esc(node.content)}</div>
+          <div class="muted" style="font-size:12px;margin-top:4px">${new Date(node.created_at).toLocaleString()}</div>
+        </div>
+        <div class="row" style="gap:8px;margin:6px 0 0 4px">
+          <button class="btn-secondary" style="padding:4px 8px" onclick="toggleReplyForm('${node.id}')">Trả lời</button>
+        </div>
+        <div class="reply-form" id="rf-${node.id}" style="display:none;margin:6px 0 0 40px">
+          <textarea id="rf-txt-${node.id}" placeholder="Viết phản hồi…"></textarea>
+          <div class="row" style="justify-content:flex-end;margin-top:6px">
+            <button class="btn" onclick="submitReply('${node.id}')">Gửi</button>
+          </div>
+        </div>
+        <div class="child" style="margin-left:40px"></div>
+      </div>`;
+    container.appendChild(wrap);
+    const childBox = wrap.querySelector('.child');
+    (node.children || []).forEach(ch => renderCommentNode(ch, childBox));
+  }
+
+  function toggleReplyForm(id){
+    const box = document.getElementById('rf-' + id);
+    box.style.display = box.style.display === 'none' ? '' : 'none';
+  }
+
+  async function submitReply(parentId){
+    if(!token) return alert('Cần đăng nhập');
+    const ta = document.getElementById('rf-txt-'+parentId);
+    const content = ta.value.trim(); if(!content) return;
+    const r = await fetch(`/api/books/${bookId}/comments`, {
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+token },
+      body: JSON.stringify({ content, parentId })
+    });
+    if(r.ok){ ta.value=''; loadComments(); } else { const j=await r.json(); alert(j.error||'Reply fail'); }
+  }
+
+  // ➜ GỬI BÌNH LUẬN GỐC
+  async function postComment(){
+    if(!token) return alert('Cần đăng nhập');
+    const ta = document.getElementById('commentInput');
+    const content = ta.value.trim();
+    if(!content) return;
+
+    const btn = ta.parentElement.querySelector('button'); if(btn) btn.disabled = true;
+    try{
+      const r = await fetch(`/api/books/${bookId}/comments`, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', Authorization:'Bearer '+token },
+        body: JSON.stringify({ content })
+      });
+      const j = await r.json().catch(()=> ({}));
+      if(r.ok){ ta.value=''; loadComments(); } else { alert(j.error||'Gửi bình luận thất bại'); }
+    } finally { if(btn) btn.disabled = false; }
+  }
+
+  async function loadComments(){
+    const r = await fetch(`/api/books/${bookId}/comments`);
+    const j = await r.json();
+    const box = $("#comments"); box.innerHTML = "";
+    j.comments.forEach(n => renderCommentNode(n, box));
+  }
+
+  /* ---------------- Like ---------------- */
+  async function toggleLike(){
+    if(!token) return alert('Cần đăng nhập');
+    const r = await fetch(`/api/books/${bookId}/like`, { method:'POST', headers:{Authorization:'Bearer '+token} });
+    const j = await r.json();
+    const btn = document.getElementById('btnLike');
+    btn.textContent = (j.liked ? '♥ Đã thích' : '♡ Thích') + ` (${j.like_count})`;
+  }
+
+  /* ---------------- Boot ---------------- */
+  (async function(){
+    try{
+      const r = await fetch(`/api/books/${bookId}`); const j = await r.json();
+      bookData = j.book;
+      $("#bookTitle").textContent = bookData?.title || "Không tìm thấy sách";
+      $("#bookMeta").textContent = (bookData?.author_name ? `Tác giả: ${bookData.author_name}` : "");
+      const elements = buildElementsFromContent(bookData?.content || "", bookData?.title || "");
+      new DigitalBookReader(elements);
+      if(!token){ $("#commentBox").style.display="none"; $("#loginHint").style.display=""; }
+      loadComments();
+    }catch(e){ console.error(e); $("#bookTitle").textContent = "Lỗi tải sách"; }
+  })();
+
+  /* ---------------- Controls ---------------- */
+  document.getElementById('prevArea').addEventListener('dblclick', ()=>history.back());
+</script>
+</body>
+</html>
